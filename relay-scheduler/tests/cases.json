@@ -1,0 +1,70 @@
+{
+  "description": "Shared Evaluator test cases for the firmware (g++ host tests) and the browser weekly chart. weekSecond is seconds since Sunday 00:00:00, in [0, 604800). days bit 0 = Sunday ... bit 6 = Saturday.",
+  "cases": [
+    {
+      "name": "midnight wrap (Monday 23:30 for 1h into Tuesday)",
+      "schedules": [
+        { "id": 1, "name": "A", "ch": 0, "days": 2, "start": 84600, "dur": 3600, "en": true }
+      ],
+      "samples": [
+        { "weekSecond": 171500, "ch": 0, "expected": true, "note": "Mon 23:45" },
+        { "weekSecond": 173000, "ch": 0, "expected": true, "note": "Tue 00:23:20" },
+        { "weekSecond": 175000, "ch": 0, "expected": false, "note": "Tue 00:56:40" }
+      ]
+    },
+    {
+      "name": "Saturday-to-Sunday wrap (Sat 23:00 for 2h into Sunday)",
+      "schedules": [
+        { "id": 1, "name": "A", "ch": 0, "days": 64, "start": 82800, "dur": 7200, "en": true }
+      ],
+      "samples": [
+        { "weekSecond": 602000, "ch": 0, "expected": true, "note": "Sat 23:30" },
+        { "weekSecond": 1800, "ch": 0, "expected": true, "note": "Sun 00:30" },
+        { "weekSecond": 5000, "ch": 0, "expected": false, "note": "Sun 01:23" }
+      ]
+    },
+    {
+      "name": "overlapping schedules on one channel merge",
+      "schedules": [
+        { "id": 1, "name": "A", "ch": 0, "days": 2, "start": 28800, "dur": 7200, "en": true },
+        { "id": 2, "name": "B", "ch": 0, "days": 2, "start": 32400, "dur": 7200, "en": true }
+      ],
+      "samples": [
+        { "weekSecond": 117000, "ch": 0, "expected": true, "note": "Mon 08:30 (A only)" },
+        { "weekSecond": 120600, "ch": 0, "expected": true, "note": "Mon 09:30 (both)" },
+        { "weekSecond": 124200, "ch": 0, "expected": true, "note": "Mon 10:30 (B only)" },
+        { "weekSecond": 127800, "ch": 0, "expected": false, "note": "Mon 11:30 (neither)" }
+      ]
+    },
+    {
+      "name": "24:00:00 duration covers the whole day",
+      "schedules": [
+        { "id": 1, "name": "A", "ch": 0, "days": 8, "start": 0, "dur": 86400, "en": true }
+      ],
+      "samples": [
+        { "weekSecond": 259200, "ch": 0, "expected": true, "note": "Wed 00:00:00" },
+        { "weekSecond": 345599, "ch": 0, "expected": true, "note": "Wed 23:59:59" },
+        { "weekSecond": 345600, "ch": 0, "expected": false, "note": "Thu 00:00:00" }
+      ]
+    },
+    {
+      "name": "disabled schedule is ignored",
+      "schedules": [
+        { "id": 1, "name": "A", "ch": 0, "days": 2, "start": 28800, "dur": 7200, "en": false }
+      ],
+      "samples": [
+        { "weekSecond": 117000, "ch": 0, "expected": false, "note": "Mon 08:30, would be ON if enabled" }
+      ]
+    },
+    {
+      "name": "different channels do not interact",
+      "schedules": [
+        { "id": 1, "name": "A", "ch": 0, "days": 127, "start": 0, "dur": 86400, "en": true }
+      ],
+      "samples": [
+        { "weekSecond": 0, "ch": 0, "expected": true, "note": "channel 0 covered all week" },
+        { "weekSecond": 0, "ch": 1, "expected": false, "note": "channel 1 has no schedule" }
+      ]
+    }
+  ]
+}
