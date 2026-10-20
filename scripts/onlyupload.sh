@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../relay-scheduler"
+pwd
+PROFILE="${1:-wroom32}"
+PORT="${2:-/dev/ttyUSB0}"
+
+arduino-cli upload --profile "$PROFILE" -p "$PORT" .
