@@ -49,7 +49,7 @@ button:disabled { opacity: 0.5; }
   margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
   flex-wrap: wrap; }
 .banner.hidden { display: none; }
-.clock { color: var(--muted); margin-bottom: 1rem; font-size: 0.95rem; }
+.clock { color: var(--muted); margin-bottom: 1rem; font-size: 0.95rem; text-align: center;}
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem; }
 .ch-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.7rem; }
