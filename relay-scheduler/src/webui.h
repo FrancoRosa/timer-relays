@@ -53,7 +53,7 @@ button:disabled { opacity: 0.5; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem; }
 .ch-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.7rem; }
-.ch-top .ch-label { flex: 1; min-width: 0; }
+.ch-top .ch-label {  min-width: 0; }
 .ch-alias { display: block; font-weight: 600; }
 .ch-channel { display: block; color: var(--text); font-weight: 600; }
 .ch-channel.small { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
@@ -275,8 +275,8 @@ function renderStatus(state) {
     card.innerHTML =
       '<div class="ch-top">' +
         '<div class="ch-label">' + channelLabelHtml(c.name, ch) + '</div>' +
-        '<span class="ch-state' + (c.on ? ' on' : '') + '">' + (c.on ? 'ON' : 'OFF') + '</span>' +
-        '<button type="button" class="icon-btn edit-btn" aria-label="Rename channel" title="Rename">&#9998;</button>' +
+        '<div class="ch-state' + (c.on ? ' on' : '') + '">' + (c.on ? 'ON' : 'OFF') + '</div>' +
+        '<button type="button" class="icon-btn edit-btn" aria-label="Rename channel" title="Rename">🖉</button>' +
       '</div>' +
       '<div class="mode-group" data-ch="' + ch + '">' +
         '<button data-mode="auto">AUTO</button>' +
@@ -352,7 +352,7 @@ function renderScheduleList() {
         row.innerHTML =
           '<div class="sched-main">' +
             '<div class="sched-name">' + (s.name || '(unnamed)') + '</div>' +
-            '<div class="sched-detail">Start: ' + fmtHMS(s.start) + ', Duration: ' + fmtHMS(s.dur) + '</div>' +
+            '<div class="sched-detail">Start: ' + fmtHMS(s.start) + ', span: ' + fmtHMS(s.dur) + '</div>' +
             '<div class="sched-detail">' + days + '</div>' +
           '</div>';
         row.addEventListener('click', () => openEditor(s.id));
