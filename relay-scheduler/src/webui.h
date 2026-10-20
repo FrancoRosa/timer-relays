@@ -11,7 +11,7 @@ static const char INDEX_HTML[] PROGMEM = R"WEBUI(<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>Relay Timer</title>
+<title>Relay Timers</title>
 <style>
 :root {
   --bg: #0f1115;
@@ -31,7 +31,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
   font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; }
 body { padding-bottom: 2rem; }
 header { padding: 1rem 1rem 0 1rem; }
-h1 { font-size: 1.2rem; margin: 0 0 0.75rem 0; }
+h1 { font-size: 1.2rem; margin: 0 0 0.75rem 0; text-align: center; }
 h2 { font-size: 1rem; margin: 0 0 0.5rem 0; color: var(--muted); }
 .tabs { display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border); }
 .tab-btn { flex: 1; padding: 0.75rem 0.5rem; background: none; border: none; color: var(--muted);
@@ -52,11 +52,18 @@ button:disabled { opacity: 0.5; }
 .clock { color: var(--muted); margin-bottom: 1rem; font-size: 0.95rem; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem; }
-.card .ch-name { font-weight: 600; margin-bottom: 0.4rem; }
-.card .ch-state { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem;
-  margin-bottom: 0.6rem; background: var(--card2); color: var(--muted); }
+.ch-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.7rem; }
+.ch-top .ch-label { flex: 1; min-width: 0; }
+.ch-alias { display: block; font-weight: 600; }
+.ch-channel { display: block; color: var(--text); font-weight: 600; }
+.ch-channel.small { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+.card .ch-state { flex: none; display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem;
+  background: var(--card2); color: var(--muted); }
 .card .ch-state.on { background: var(--accent); color: var(--accent-text); }
-.mode-group { display: flex; gap: 0.3rem; }
+.icon-btn { flex: none; background: none; border: none; min-height: auto; padding: 0.2rem 0.3rem;
+  font-size: 1.15rem; line-height: 1; color: var(--muted); }
+.icon-btn:active { color: var(--text); }
+.mode-group { display: flex; gap: 1rem; }
 .mode-group button { flex: 1; padding: 0.5rem 0.3rem; font-size: 0.85rem; }
 .mode-group button.selected { border-color: var(--text); }
 .mode-group button[data-mode="auto"].selected { background: var(--card2); border-color: var(--accent); color: var(--accent); }
@@ -64,7 +71,7 @@ button:disabled { opacity: 0.5; }
 .mode-group button[data-mode="off"].selected { background: var(--force-off); color: #250b0e; border-color: var(--force-off); }
 #add-schedule-btn { margin-bottom: 1rem; width: 100%; }
 .ch-group { margin-bottom: 1.25rem; }
-.ch-group-title { font-weight: 600; margin-bottom: 0.4rem; }
+.ch-group-title { margin-bottom: 0.4rem; }
 .sched-row { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   padding: 0.7rem 0.9rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;
   align-items: center; gap: 0.5rem; }
@@ -100,7 +107,7 @@ svg#week-chart { width: 100%; height: auto; background: var(--card); border-radi
 </head>
 <body>
 <header>
-  <h1>Relay Timer</h1>
+  <h1>Relay Timers</h1>
   <nav class="tabs">
     <button class="tab-btn active" data-tab="status">Status</button>
     <button class="tab-btn" data-tab="schedules">Schedules</button>
@@ -182,6 +189,37 @@ let schedules = [];
 let lastState = null;
 let editingId = null; // null = creating
 
+// ---- Channel friendly names ----------------------------------------------
+
+function channelAlias(ch) {
+  return (lastState && lastState.channels[ch] && lastState.channels[ch].name) || '';
+}
+
+// Renders the alias (if set) above a smaller "Channel N" line, or just
+// "Channel N" at normal weight if no alias has been given.
+function channelLabelHtml(alias, ch) {
+  if (alias) {
+    return '<span class="ch-alias">' + alias + '</span>' +
+           '<span class="ch-channel small">Channel ' + (ch + 1) + '</span>';
+  }
+  return '<span class="ch-channel">Channel ' + (ch + 1) + '</span>';
+}
+
+async function renameChannel(ch) {
+  const name = prompt('Friendly name for Channel ' + (ch + 1) + ' (leave blank to clear):', channelAlias(ch));
+  if (name === null) return;
+  if (name.length > 24) { alert('Name is too long (max 24 characters).'); return; }
+  try {
+    const state = await apiSend('/api/channels/' + ch + '/name', 'POST', { name });
+    lastState = state;
+    renderStatus(state);
+    renderScheduleList();
+    drawChart();
+  } catch (e) {
+    alert('Could not rename: ' + e.message);
+  }
+}
+
 // ---- API helpers --------------------------------------------------------
 
 async function apiGet(path) {
@@ -227,7 +265,7 @@ function fmtHMS(totalSeconds) {
 function renderStatus(state) {
   document.getElementById('clock-banner').classList.toggle('hidden', state.valid);
   document.getElementById('clock-display').textContent =
-    (state.local || '--') + '  (' + state.tz + ')' + (state.valid ? '' : '  [unverified]');
+    'Board time: ' + (state.local || '--') + (state.valid ? '' : '  [unverified]');
 
   const cards = document.getElementById('relay-cards');
   cards.innerHTML = '';
@@ -235,8 +273,11 @@ function renderStatus(state) {
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML =
-      '<div class="ch-name">Channel ' + (ch + 1) + '</div>' +
-      '<div class="ch-state' + (c.on ? ' on' : '') + '">' + (c.on ? 'ON' : 'OFF') + '</div>' +
+      '<div class="ch-top">' +
+        '<div class="ch-label">' + channelLabelHtml(c.name, ch) + '</div>' +
+        '<span class="ch-state' + (c.on ? ' on' : '') + '">' + (c.on ? 'ON' : 'OFF') + '</span>' +
+        '<button type="button" class="icon-btn edit-btn" aria-label="Rename channel" title="Rename">&#9998;</button>' +
+      '</div>' +
       '<div class="mode-group" data-ch="' + ch + '">' +
         '<button data-mode="auto">AUTO</button>' +
         '<button data-mode="on">ON</button>' +
@@ -246,6 +287,7 @@ function renderStatus(state) {
       if (btn.dataset.mode === c.mode) btn.classList.add('selected');
       btn.addEventListener('click', () => setMode(ch, btn.dataset.mode));
     });
+    card.querySelector('.edit-btn').addEventListener('click', () => renameChannel(ch));
     cards.appendChild(card);
   });
 }
@@ -289,11 +331,6 @@ async function loadSchedules() {
   renderScheduleList();
 }
 
-function describeSchedule(s) {
-  const days = DAY_NAMES.filter((_, i) => s.days & (1 << i)).join(', ');
-  return days + '  ' + fmtHMS(s.start) + ' for ' + fmtHMS(s.dur);
-}
-
 function renderScheduleList() {
   const list = document.getElementById('schedule-list');
   list.innerHTML = '';
@@ -301,7 +338,7 @@ function renderScheduleList() {
     const group = document.createElement('div');
     group.className = 'ch-group';
     const items = schedules.filter(s => s.ch === ch);
-    group.innerHTML = '<div class="ch-group-title">Channel ' + (ch + 1) + '</div>';
+    group.innerHTML = '<div class="ch-group-title">' + channelLabelHtml(channelAlias(ch), ch) + '</div>';
     if (items.length === 0) {
       const note = document.createElement('div');
       note.className = 'empty-note';
@@ -311,10 +348,12 @@ function renderScheduleList() {
       items.forEach(s => {
         const row = document.createElement('div');
         row.className = 'sched-row' + (s.en ? '' : ' disabled');
+        const days = DAY_NAMES.filter((_, i) => s.days & (1 << i)).join(', ');
         row.innerHTML =
           '<div class="sched-main">' +
             '<div class="sched-name">' + (s.name || '(unnamed)') + '</div>' +
-            '<div class="sched-detail">' + describeSchedule(s) + '</div>' +
+            '<div class="sched-detail">Start: ' + fmtHMS(s.start) + ', Duration: ' + fmtHMS(s.dur) + '</div>' +
+            '<div class="sched-detail">' + days + '</div>' +
           '</div>';
         row.addEventListener('click', () => openEditor(s.id));
         group.appendChild(row);
@@ -494,8 +533,17 @@ function drawChart() {
   // Channel labels + row separators + hour grid
   for (let ch = 0; ch < CHANNEL_COUNT; ch++) {
     const y = CHART_TOP + ch * ROW_HEIGHT;
-    svg.appendChild(svgEl('text', { x: 4, y: y + ROW_HEIGHT / 2 + 4, fill: 'var(--muted)', 'font-size': 11 }));
-    svg.lastChild.textContent = 'Ch ' + (ch + 1);
+    const alias = channelAlias(ch);
+    if (alias) {
+      svg.appendChild(svgEl('text', { x: 4, y: y + ROW_HEIGHT / 2 - 2, fill: 'var(--text)',
+        'font-size': 10, 'font-weight': 600 }));
+      svg.lastChild.textContent = alias;
+      svg.appendChild(svgEl('text', { x: 4, y: y + ROW_HEIGHT / 2 + 10, fill: 'var(--muted)', 'font-size': 8 }));
+      svg.lastChild.textContent = 'Channel ' + (ch + 1);
+    } else {
+      svg.appendChild(svgEl('text', { x: 4, y: y + ROW_HEIGHT / 2 + 4, fill: 'var(--muted)', 'font-size': 11 }));
+      svg.lastChild.textContent = 'Ch ' + (ch + 1);
+    }
     svg.appendChild(svgEl('line', { x1: CHART_LEFT, y1: y, x2: 690, y2: y, stroke: 'var(--border)' }));
   }
   svg.appendChild(svgEl('line', { x1: CHART_LEFT, y1: CHART_TOP + CHANNEL_COUNT * ROW_HEIGHT,

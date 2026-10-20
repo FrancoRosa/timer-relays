@@ -16,6 +16,10 @@ bool SettingsStore::begin() {
       if (!err) {
         strlcpy(settings_.tz, doc["tz"] | "<-05>5", sizeof(settings_.tz));
         settings_.softClockEpoch = doc["softClockEpoch"] | 0;
+        JsonArrayConst names = doc["chNames"].as<JsonArrayConst>();
+        for (uint8_t ch = 0; ch < CHANNEL_COUNT; ch++) {
+          strlcpy(settings_.channelNames[ch], names[ch] | "", sizeof(settings_.channelNames[ch]));
+        }
         return true;
       }
     }
@@ -29,10 +33,19 @@ void SettingsStore::setTz(const char* tz) { strlcpy(settings_.tz, tz, sizeof(set
 
 void SettingsStore::setSoftClockEpoch(uint32_t epoch) { settings_.softClockEpoch = epoch; }
 
+void SettingsStore::setChannelName(uint8_t ch, const char* name) {
+  if (ch >= CHANNEL_COUNT) return;
+  strlcpy(settings_.channelNames[ch], name, sizeof(settings_.channelNames[ch]));
+}
+
 bool SettingsStore::save() {
   JsonDocument doc;
   doc["tz"] = settings_.tz;
   doc["softClockEpoch"] = settings_.softClockEpoch;
+  JsonArray names = doc["chNames"].to<JsonArray>();
+  for (uint8_t ch = 0; ch < CHANNEL_COUNT; ch++) {
+    names.add(settings_.channelNames[ch]);
+  }
 
   File f = LittleFS.open(SETTINGS_TMP_PATH, "w");
   if (!f) return false;

@@ -78,7 +78,7 @@ void WebApi::startAccessPoint() {
   // needs generating, persisting, or reading off the serial monitor: it
   // is always "pASS" followed by the SSID's last 4 hex digits.
   char password[16];
-  snprintf(password, sizeof(password), "pASS%02X%02X", mac[4], mac[5]);
+  snprintf(password, sizeof(password), "pass%02X%02X", mac[4], mac[5]);
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
@@ -123,6 +123,7 @@ void WebApi::handleGetState() {
     JsonObject c = channels.add<JsonObject>();
     c["on"] = relays_->isOn(ch);
     c["mode"] = modeToString(relays_->getOverride(ch));
+    c["name"] = settings_->get().channelNames[ch];
   }
   sendJson(200, doc);
 }
@@ -221,6 +222,33 @@ void WebApi::handleNotFound() {
       server_.send(204, "text/plain", "");
       return;
     }
+  }
+
+  if (uri.startsWith("/api/channels/") && uri.endsWith("/name") && method == HTTP_POST) {
+    String middle = uri.substring(strlen("/api/channels/"), uri.length() - strlen("/name"));
+    int ch = middle.toInt();
+    if (ch < 0 || ch >= CHANNEL_COUNT) {
+      sendError(404, "channel out of range");
+      return;
+    }
+    if (!server_.hasArg("plain")) {
+      sendError(400, "missing body");
+      return;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, server_.arg("plain"))) {
+      sendError(400, "invalid JSON");
+      return;
+    }
+    const char* name = doc["name"] | "";
+    if (strlen(name) > CHANNEL_NAME_MAX_LEN) {
+      sendError(400, "name too long (max 24 characters)");
+      return;
+    }
+    settings_->setChannelName((uint8_t)ch, name);
+    settings_->save();
+    handleGetState();
+    return;
   }
 
   if (uri.startsWith("/api/relays/") && uri.endsWith("/mode") && method == HTTP_POST) {
