@@ -276,7 +276,7 @@ function renderStatus(state) {
       '<div class="ch-top">' +
         '<div class="ch-label">' + channelLabelHtml(c.name, ch) + '</div>' +
         '<div class="ch-state' + (c.on ? ' on' : '') + '">' + (c.on ? 'ON' : 'OFF') + '</div>' +
-        '<button type="button" class="icon-btn edit-btn" aria-label="Rename channel" title="Rename">🖉</button>' +
+        '<button type="button" class="icon-btn edit-btn" aria-label="Rename channel" title="Rename">&#9998;</button>' +
       '</div>' +
       '<div class="mode-group" data-ch="' + ch + '">' +
         '<button data-mode="auto">AUTO</button>' +
