@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
-
+cd "$(dirname "$0")/../relay-scheduler"
+pwd
 PROFILE="${1:-wroom32}"
 PORT="${2:-/dev/ttyUSB0}"
 
